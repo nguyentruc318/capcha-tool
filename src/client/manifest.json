@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Captcha MVP",
+  "version": "1.0",
+  "description": "Tool tự động quét và điền mã CAPTCHA số",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}
