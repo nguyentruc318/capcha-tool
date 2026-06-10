@@ -20,7 +20,7 @@ export function docFileExcel(filePath: string): IAccountRow[] {
     return rawData
       .map((row) => ({
         profileId: String(row.profileId).trim(),
-        email: String(row.email).trim(),
+        username: String(row.username).trim(),
         password: String(row.password).trim(),
       }))
       .filter((row) => row.profileId !== ''); // Lọc bỏ dòng trống không có ID GPM

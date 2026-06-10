@@ -7,10 +7,10 @@ import { LOGIN_URL, SELECTORS } from '../types/constant';
 
 //* Quy trình Auto tự động hóa chính cho từng tài khoản
 export async function runAutoForAccount(account: IAccountRow) {
-  const { profileId, email, password } = account;
+  const { profileId, username, password } = account;
 
   console.log('\n==================================================');
-  console.log(`🚀 [Tool] Đang xử lý tài khoản: ${email}`);
+  console.log(`🚀 [Tool] Đang xử lý tài khoản: ${username}`);
 
   let browser: Browser | null = null;
 
@@ -29,9 +29,9 @@ export async function runAutoForAccount(account: IAccountRow) {
       timeout: 10000,
     });
 
-    await login(page, email, password);
+    await login(page, username, password);
 
-    console.log(`🎉 [Thành công] Đã submit login cho ${email}`);
+    console.log(`🎉 [Thành công] Đã submit login cho ${username}`);
   } catch (error) {
     if (isAxiosError(error)) {
       console.error(`❌ [Axios Error] ${error.message}`);

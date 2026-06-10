@@ -12,26 +12,39 @@ import { createWorker, Worker } from 'tesseract.js';
 export class CapchaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CapchaService.name);
 
-  private worker!: Worker;
+  private workers: Worker[] = [];
+  private currentIndex = 0;
 
   async onModuleInit(): Promise<void> {
-    this.logger.log('Initializing OCR worker...');
+    this.logger.log('Initializing 3 OCR workers...');
 
-    this.worker = await createWorker('eng');
+    this.workers = await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        const worker = await createWorker('eng');
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789',
+          preserve_interword_spaces: '0',
+        });
+        return worker;
+      }),
+    );
 
-    await this.worker.setParameters({
-      tessedit_char_whitelist: '0123456789',
-      preserve_interword_spaces: '0',
-    });
-
-    this.logger.log('OCR worker initialized');
+    this.logger.log('3 OCR workers initialized');
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.worker) {
-      await this.worker.terminate();
-      this.logger.log('OCR worker terminated');
-    }
+    await Promise.all(
+      this.workers.map(async (worker) => {
+        await worker.terminate();
+      }),
+    );
+    this.logger.log('All OCR workers terminated');
+  }
+
+  private getNextWorker(): Worker {
+    const worker = this.workers[this.currentIndex];
+    this.currentIndex = (this.currentIndex + 1) % this.workers.length;
+    return worker;
   }
 
   async giaiCaptchaSo(base64Image: string): Promise<string> {
@@ -46,9 +59,11 @@ export class CapchaService implements OnModuleInit, OnModuleDestroy {
         .sharpen()
         .toBuffer();
 
+      const worker = this.getNextWorker();
+
       const {
         data: { text },
-      } = await this.worker.recognize(processedBuffer);
+      } = await worker.recognize(processedBuffer);
 
       const result = text.replace(/\D/g, '');
 

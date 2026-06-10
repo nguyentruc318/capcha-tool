@@ -5,7 +5,7 @@ import { CapchaCode, GpmStartProfileResponse } from '../types/type';
 import { SELECTORS } from '../types/constant';
 
 export async function connectGpmProfile(profileId: string): Promise<Browser> {
-  const gpmUrl = `http://127.0.0.1:19995/api/v3/profiles/start/${profileId}`;
+  const gpmUrl = `http://localhost:9495/api/v1/profiles/start/${profileId}?window_scale=0.8&window_pos=100%2C100&window_size=800%2C600`;
 
   const gpmRes = await axios.get<GpmStartProfileResponse>(gpmUrl);
 
@@ -13,11 +13,13 @@ export async function connectGpmProfile(profileId: string): Promise<Browser> {
     throw new Error(`Không thể mở GPM Profile ${profileId}`);
   }
 
-  const browserWSEndpoint = gpmRes.data.data.browser_ws_endpoint;
+  const browserWSEndpoint =
+    gpmRes.data.data.websocket_debugging_url ||
+    gpmRes.data.data.remote_debugging_port;
 
   console.log(`✅ [GPM] Mở Profile thành công. Endpoint: ${browserWSEndpoint}`);
 
-  return chromium.connectOverCDP(browserWSEndpoint);
+  return chromium.connectOverCDP(browserWSEndpoint!);
 }
 export async function getPage(browser: Browser): Promise<Page> {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
@@ -27,14 +29,27 @@ export async function getPage(browser: Browser): Promise<Page> {
 }
 export async function fillLoginForm(
   page: Page,
-  email: string,
+  username: string,
   password: string,
 ) {
-  await page.fill(SELECTORS.username, email);
+  await page.fill(SELECTORS.username, username);
 
   await page.fill(SELECTORS.password, password);
 }
 export async function getCaptchaBase64(page: Page): Promise<string> {
+  // Đợi captcha load xong và có src hợp lệ
+  await page.waitForSelector(SELECTORS.captchaImage, { state: 'visible' });
+
+  // Đợi thêm cho src có base64 (poll liên tục)
+  await page.waitForFunction(
+    (selector) => {
+      const img = document.querySelector(selector) as HTMLImageElement;
+      return img?.src?.includes('base64,');
+    },
+    SELECTORS.captchaImage,
+    { timeout: 10000 },
+  );
+
   const fullSrcBase64 = await page.$eval(
     SELECTORS.captchaImage,
     (img: HTMLImageElement) => img.src,
@@ -44,7 +59,6 @@ export async function getCaptchaBase64(page: Page): Promise<string> {
     throw new Error('Captcha không chứa dữ liệu Base64 hợp lệ');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   return fullSrcBase64.split('base64,')[1]!;
 }
 export async function solveCaptcha(imageBase64: string): Promise<string> {
@@ -68,12 +82,12 @@ export async function submitLogin(page: Page, captchaCode: string) {
 
   await page.waitForTimeout(500);
 
-  await page.click(SELECTORS.submitButton);
+  // await page.click(SELECTORS.submitButton);
 }
-export async function login(page: Page, email: string, password: string) {
+export async function login(page: Page, username: string, password: string) {
   console.log('📝 [Browser] Đang nhập thông tin đăng nhập...');
 
-  await fillLoginForm(page, email, password);
+  await fillLoginForm(page, username, password);
 
   console.log('📸 [Browser] Đang lấy captcha...');
 
