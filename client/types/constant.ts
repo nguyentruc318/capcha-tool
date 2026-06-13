@@ -6,4 +6,5 @@ export const SELECTORS = {
   captchaImage: 'img.image',
   captchaInput: 'input[placeholder*="Mã xác nhận"]',
   submitButton: 'button[type="submit"]',
+  refreshCaptchaButton: 'button.refresh-captcha',
 };

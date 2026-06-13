@@ -77,12 +77,29 @@ export async function solveCaptcha(imageBase64: string): Promise<string> {
 
   return response.data.code;
 }
+export async function refreshCaptcha(page: Page) {
+  const oldSrc = await page.locator(SELECTORS.captchaImage).getAttribute('src');
+
+  await page.click(SELECTORS.refreshCaptchaButton);
+
+  await page.waitForFunction(
+    ({ selector, oldSrc }) => {
+      const img = document.querySelector(selector) as HTMLImageElement;
+
+      return !!img?.src && img.src !== oldSrc;
+    },
+    {
+      selector: SELECTORS.captchaImage,
+      oldSrc,
+    },
+  );
+}
 export async function submitLogin(page: Page, captchaCode: string) {
   await page.fill(SELECTORS.captchaInput, captchaCode);
 
   await page.waitForTimeout(500);
 
-  // await page.click(SELECTORS.submitButton);
+  await page.click(SELECTORS.submitButton);
 }
 export async function login(page: Page, username: string, password: string) {
   console.log('📝 [Browser] Đang nhập thông tin đăng nhập...');
